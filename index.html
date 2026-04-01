@@ -1,0 +1,450 @@
+import tkinter as tk
+from tkinter import messagebox
+
+class GomokuGame:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("五子棋對弈 - Gemini 棋室")
+        
+        self.grid_size = 15  # 15x15 標準棋盤
+        self.cell_size = 40  # 每格 40 像素
+        self.margin = 30     # 邊距
+        self.turn = 1        # 1 為黑子, 2 為白子
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        
+        self.canvas = tk.Canvas(
+            master, 
+            width=self.grid_size * self.cell_size + self.margin,
+            height=self.grid_size * self.cell_size + self.margin,
+            bg="#E3C16F"  # 經典木質棋盤色
+        )
+        self.canvas.pack()
+        self.draw_grid()
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+    def draw_grid(self):
+        """繪製棋盤線條"""
+        for i in range(self.grid_size):
+            # 橫線
+            self.canvas.create_line(
+                self.margin, self.margin + i * self.cell_size,
+                self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size
+            )
+            # 直線
+            self.canvas.create_line(
+                self.margin + i * self.cell_size, self.margin,
+                self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size
+            )
+
+    def handle_click(self, event):
+        """處理落子點擊"""
+        # 計算最接近的格點
+        x = round((event.x - self.margin) / self.cell_size)
+        y = round((event.y - self.margin) / self.cell_size)
+
+        # 檢查是否在棋盤內且該處沒棋子
+        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
+            self.place_piece(x, y)
+
+    def place_piece(self, x, y):
+        self.board[y][x] = self.turn
+        color = "black" if self.turn == 1 else "white"
+        
+        # 繪製棋子
+        px = self.margin + x * self.cell_size
+        py = self.margin + y * self.cell_size
+        r = 15
+        self.canvas.create_oval(px-r, py-r, px+r, py+r, fill=color, outline="gray")
+
+        if self.check_win(x, y):
+            winner = "黑方" if self.turn == 1 else "白方"
+            messagebox.showinfo("遊戲結束", f"恭喜！{winner}獲勝了！")
+            self.reset_game()
+        else:
+            self.turn = 3 - self.turn  # 切換玩家 (1->2, 2->1)
+
+    def check_win(self, x, y):
+        """檢查四個方向是否有連成五子"""
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dx, dy in directions:
+            count = 1
+            # 正向檢查
+            nx, ny = x + dx, y + dy
+            while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == self.turn:
+                count += 1
+                nx += dx
+                ny += dy
+            # 反向檢查
+            nx, ny = x - dx, y - dy
+            while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == self.turn:
+                count += 1
+                nx -= dx
+                ny -= dy
+            
+            if count >= 5:
+                return True
+        return False
+
+    def reset_game(self):
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.canvas.delete("all")
+        self.draw_grid()
+        self.turn = 1
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = GomokuGame(root)
+    root.mainloop()
+import tkinter as tk
+from tkinter import messagebox
+
+class GomokuGame:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("五子棋 - 聽牌提示版")
+        
+        self.grid_size = 15
+        self.cell_size = 40
+        self.margin = 30
+        self.turn = 1 
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.hints = [] # 用來儲存提示圓圈的 ID
+        
+        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
+                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
+        self.canvas.pack()
+        self.draw_grid()
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+    def draw_grid(self):
+        for i in range(self.grid_size):
+            self.canvas.create_line(self.margin, self.margin + i * self.cell_size,
+                                    self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size)
+            self.canvas.create_line(self.margin + i * self.cell_size, self.margin,
+                                    self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size)
+
+    def handle_click(self, event):
+        x = round((event.x - self.margin) / self.cell_size)
+        y = round((event.y - self.margin) / self.cell_size)
+
+        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
+            self.clear_hints() # 下子前清空舊提示
+            self.place_piece(x, y)
+            self.show_winning_hints() # 下子後顯示新提示
+
+    def place_piece(self, x, y):
+        self.board[y][x] = self.turn
+        color = "black" if self.turn == 1 else "white"
+        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
+        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color)
+
+        if self.check_win(x, y, self.turn):
+            messagebox.showinfo("遊戲結束", f"恭喜 {'黑方' if self.turn == 1 else '白方'} 獲勝！")
+            self.reset_game()
+        else:
+            self.turn = 3 - self.turn
+
+    def check_win(self, x, y, player):
+        """檢查特定位置落子後，該玩家是否達成五連"""
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dx, dy in directions:
+            count = 1
+            for direction in [1, -1]:
+                nx, ny = x + dx * direction, y + dy * direction
+                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
+                    count += 1
+                    nx += dx * direction
+                    ny += dy * direction
+            if count >= 5: return True
+        return False
+
+    def show_winning_hints(self):
+        """掃描全盤，找出下一手就能贏的位置（聽牌點）"""
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                if self.board[y][x] == 0:
+                    # 如果當前玩家下一步能贏，標註為「進攻聽牌」
+                    if self.check_win(x, y, self.turn):
+                        self.draw_hint(x, y, "red") 
+                    # 如果對手下一步能贏，標註為「防禦點」（選用）
+                    elif self.check_win(x, y, 3 - self.turn):
+                        self.draw_hint(x, y, "blue")
+
+    def draw_hint(self, x, y, color):
+        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
+        # 畫一個小空心圓作為提示
+        hid = self.canvas.create_oval(px-5, py-5, px+5, py+5, outline=color, width=2)
+        self.hints.append(hid)
+
+    def clear_hints(self):
+        for hid in self.hints:
+            self.canvas.delete(hid)
+        self.hints = []
+
+    def reset_game(self):
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.canvas.delete("all")
+        self.draw_grid()
+        self.turn = 1
+        self.hints = []
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = GomokuGame(root)
+    root.mainloop()
+import tkinter as tk
+from tkinter import messagebox
+import random
+
+class GomokuAI:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("五子棋：人機大戰版")
+        
+        self.grid_size = 15
+        self.cell_size = 40
+        self.margin = 30
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.turn = 1  # 1: 玩家(黑), 2: 電腦(白)
+        self.game_over = False
+        
+        # 棋型評分
+        self.scores = {
+            "FIVE": 100000,
+            "LIVE_FOUR": 10000,
+            "DORMANT_FOUR": 1000,
+            "LIVE_THREE": 1000,
+            "DORMANT_THREE": 100,
+            "LIVE_TWO": 100,
+            "DORMANT_TWO": 10
+        }
+
+        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
+                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
+        self.canvas.pack()
+        self.draw_grid()
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+    def draw_grid(self):
+        for i in range(self.grid_size):
+            self.canvas.create_line(self.margin, self.margin + i * self.cell_size,
+                                    self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size)
+            self.canvas.create_line(self.margin + i * self.cell_size, self.margin,
+                                    self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size)
+
+    def handle_click(self, event):
+        if self.game_over or self.turn != 1: return
+        
+        x = round((event.x - self.margin) / self.cell_size)
+        y = round((event.y - self.margin) / self.cell_size)
+
+        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
+            self.place_piece(x, y)
+            if not self.game_over:
+                self.master.after(500, self.ai_move) # 延遲半秒讓電腦思考
+
+    def place_piece(self, x, y):
+        self.board[y][x] = self.turn
+        color = "black" if self.turn == 1 else "white"
+        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
+        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color, tags="piece")
+
+        if self.check_win(x, y, self.turn):
+            winner = "玩家" if self.turn == 1 else "電腦"
+            messagebox.showinfo("遊戲結束", f"{winner}獲勝了！")
+            self.game_over = True
+            self.reset_game()
+        else:
+            self.turn = 3 - self.turn
+
+    def check_win(self, x, y, player):
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dx, dy in directions:
+            count = 1
+            for d in [1, -1]:
+                nx, ny = x + dx*d, y + dy*d
+                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
+                    count += 1
+                    nx, ny = nx + dx*d, ny + dy*d
+            if count >= 5: return True
+        return False
+
+    # --- AI 邏輯部分 ---
+    
+    def ai_move(self):
+        best_score = -1
+        best_moves = []
+
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                if self.board[y][x] == 0:
+                    # 計算該位置的總分：自己的進攻分 + 對手的威脅分
+                    my_score = self.evaluate_point(x, y, 2)
+                    enemy_score = self.evaluate_point(x, y, 1)
+                    
+                    # 權衡攻守：如果對手快贏了，防禦權重加高
+                    total_score = my_score + enemy_score 
+                    
+                    if total_score > best_score:
+                        best_score = total_score
+                        best_moves = [(x, y)]
+                    elif total_score == best_score:
+                        best_moves.append((x, y))
+
+        if best_moves:
+            move = random.choice(best_moves)
+            self.place_piece(move[0], move[1])
+
+    def evaluate_point(self, x, y, player):
+        """評估單一落子點的分數"""
+        total_score = 0
+        enemy = 3 - player
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        
+        for dx, dy in directions:
+            line = []
+            # 獲取該方向前後各 4 格的狀況
+            for i in range(-4, 5):
+                nx, ny = x + i*dx, y + i*dy
+                if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                    if i == 0:
+                        line.append(player)
+                    else:
+                        line.append(self.board[ny][nx])
+                else:
+                    line.append(-1) # 邊界
+            
+            total_score += self.analyze_line(line, player)
+        return total_score
+
+    def analyze_line(self, line, player):
+        """分析一條線上的棋型並給分"""
+        line_str = "".join([str(x) if x != -1 else "B" for x in line]) # B 代表 Boundary
+        p = str(player)
+        
+        if p*5 in line_str: return self.scores["FIVE"]
+        if "0"+p*4+"0" in line_str: return self.scores["LIVE_FOUR"]
+        if "0"+p*4 in line_str or p*4+"0" in line_str: return self.scores["DORMANT_FOUR"]
+        if "0"+p*3+"0" in line_str: return self.scores["LIVE_THREE"]
+        if "0"+p*2+"0" in line_str: return self.scores["LIVE_TWO"]
+        
+        return 0
+
+    def reset_game(self):
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.canvas.delete("piece")
+        self.turn = 1
+        self.game_over = False
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = GomokuAI(root)
+    root.mainloop()
+
+pip install pygame
+
+import tkinter as tk
+from tkinter import messagebox
+import random
+import pygame  # 引入音效庫
+
+class GomokuAI:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("五子棋：人機大戰（音效增強版）")
+        
+        # 初始化 Pygame Mixer
+        pygame.mixer.init()
+        self.load_sounds()
+
+        self.grid_size = 15
+        self.cell_size = 40
+        self.margin = 30
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.turn = 1 
+        self.game_over = False
+        
+        # 棋型評分
+        self.scores = {"FIVE": 100000, "LIVE_FOUR": 10000, "DORMANT_FOUR": 1000, "LIVE_THREE": 1000}
+
+        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
+                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
+        self.canvas.pack()
+        self.draw_grid()
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+    def load_sounds(self):
+        """加載音效檔案"""
+        try:
+            self.sound_stone = pygame.mixer.Sound("stone.wav")
+            self.sound_win = pygame.mixer.Sound("win.wav")
+            self.sound_lose = pygame.mixer.Sound("lose.wav")
+        except:
+            print("音效檔案遺失，將以靜音模式執行")
+            self.sound_stone = self.sound_win = self.sound_lose = None
+
+    def play_sound(self, sound):
+        """播放音效"""
+        if sound:
+            sound.play()
+
+    def handle_click(self, event):
+        if self.game_over or self.turn != 1: return
+        x = round((event.x - self.margin) / self.cell_size)
+        y = round((event.y - self.margin) / self.cell_size)
+
+        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
+            self.place_piece(x, y)
+            if not self.game_over:
+                self.master.after(500, self.ai_move)
+
+    def place_piece(self, x, y):
+        self.board[y][x] = self.turn
+        color = "black" if self.turn == 1 else "white"
+        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
+        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color, tags="piece")
+        
+        # 播放落子聲
+        self.play_sound(self.sound_stone)
+
+        if self.check_win(x, y, self.turn):
+            self.game_over = True
+            if self.turn == 1:
+                self.play_sound(self.sound_win)
+                messagebox.showinfo("遊戲結束", "恭喜你贏了！")
+            else:
+                self.play_sound(self.sound_lose)
+                messagebox.showinfo("遊戲結束", "電腦獲勝，再接再厲！")
+            self.reset_game()
+        else:
+            self.turn = 3 - self.turn
+
+    def check_win(self, x, y, player):
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dx, dy in directions:
+            count = 1
+            for d in [1, -1]:
+                nx, ny = x + dx*d, y + dy*d
+                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
+                    count += 1
+                    nx, ny = nx + dx*d, ny + dy*d
+            if count >= 5: return True
+        return False
+
+    def ai_move(self):
+        # ... (此處省略與上一版相同的 AI 邏輯代碼以節省空間) ...
+        # 確保在 ai_move 最後調用 self.place_piece(move[0], move[1]) 即可自動觸發音效
+        pass
+
+    # (其餘 evaluate_point, analyze_line 等函式保持不變)
+
+    def reset_game(self):
+        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
+        self.canvas.delete("piece")
+        self.turn = 1
+        self.game_over = False
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = GomokuAI(root)
+    root.mainloop()
