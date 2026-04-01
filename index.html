@@ -1,450 +1,405 @@
-import tkinter as tk
-from tkinter import messagebox
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋 AI 挑戰賽 - 音效增強版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --board-color: #e3c18d;
+        }
+        body {
+            background-color: #f3f4f6;
+            touch-action: none;
+            user-select: none;
+        }
+        .board-container {
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            background-color: var(--board-color);
+            margin: 0 auto;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+            max-width: 100%;
+            height: auto;
+        }
+        .mode-active {
+            background-color: #3b82f6 !important;
+            color: white !important;
+        }
+        .sound-toggle {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .sound-toggle:active { transform: scale(0.9); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-class GomokuGame:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("五子棋對弈 - Gemini 棋室")
-        
-        self.grid_size = 15  # 15x15 標準棋盤
-        self.cell_size = 40  # 每格 40 像素
-        self.margin = 30     # 邊距
-        self.turn = 1        # 1 為黑子, 2 為白子
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        
-        self.canvas = tk.Canvas(
-            master, 
-            width=self.grid_size * self.cell_size + self.margin,
-            height=self.grid_size * self.cell_size + self.margin,
-            bg="#E3C16F"  # 經典木質棋盤色
-        )
-        self.canvas.pack()
-        self.draw_grid()
-        self.canvas.bind("<Button-1>", self.handle_click)
-
-    def draw_grid(self):
-        """繪製棋盤線條"""
-        for i in range(self.grid_size):
-            # 橫線
-            self.canvas.create_line(
-                self.margin, self.margin + i * self.cell_size,
-                self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size
-            )
-            # 直線
-            self.canvas.create_line(
-                self.margin + i * self.cell_size, self.margin,
-                self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size
-            )
-
-    def handle_click(self, event):
-        """處理落子點擊"""
-        # 計算最接近的格點
-        x = round((event.x - self.margin) / self.cell_size)
-        y = round((event.y - self.margin) / self.cell_size)
-
-        # 檢查是否在棋盤內且該處沒棋子
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
-            self.place_piece(x, y)
-
-    def place_piece(self, x, y):
-        self.board[y][x] = self.turn
-        color = "black" if self.turn == 1 else "white"
-        
-        # 繪製棋子
-        px = self.margin + x * self.cell_size
-        py = self.margin + y * self.cell_size
-        r = 15
-        self.canvas.create_oval(px-r, py-r, px+r, py+r, fill=color, outline="gray")
-
-        if self.check_win(x, y):
-            winner = "黑方" if self.turn == 1 else "白方"
-            messagebox.showinfo("遊戲結束", f"恭喜！{winner}獲勝了！")
-            self.reset_game()
-        else:
-            self.turn = 3 - self.turn  # 切換玩家 (1->2, 2->1)
-
-    def check_win(self, x, y):
-        """檢查四個方向是否有連成五子"""
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        for dx, dy in directions:
-            count = 1
-            # 正向檢查
-            nx, ny = x + dx, y + dy
-            while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == self.turn:
-                count += 1
-                nx += dx
-                ny += dy
-            # 反向檢查
-            nx, ny = x - dx, y - dy
-            while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == self.turn:
-                count += 1
-                nx -= dx
-                ny -= dy
+    <div class="max-w-md w-full space-y-4">
+        <div class="text-center">
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-3xl font-bold text-gray-800">五子棋 AI</h1>
+                <button id="soundToggle" class="sound-toggle bg-white p-2 rounded-full shadow-sm border border-gray-200">
+                    <svg id="soundOnIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                    <svg id="soundOffIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                    </svg>
+                </button>
+            </div>
             
-            if count >= 5:
-                return True
-        return False
+            <div class="flex justify-center mb-4 bg-gray-200 p-1 rounded-lg">
+                <button id="p2pMode" class="flex-1 py-1 px-3 rounded-md text-sm font-medium transition mode-active">雙人對戰</button>
+                <button id="p2cMode" class="flex-1 py-1 px-3 rounded-md text-sm font-medium transition">挑戰 AI</button>
+            </div>
 
-    def reset_game(self):
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.canvas.delete("all")
-        self.draw_grid()
-        self.turn = 1
+            <div id="statusCard" class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center border-l-8 border-black">
+                <div>
+                    <p class="text-sm text-gray-500 uppercase tracking-wider">目前回合</p>
+                    <p id="turnDisplay" class="text-xl font-bold text-gray-800">黑子 (玩家)</p>
+                </div>
+                <div id="aiThinking" class="hidden flex items-center text-blue-600 animate-pulse">
+                    <span class="text-xs font-bold mr-2">AI 思考中...</span>
+                    <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
+                </div>
+            </div>
+        </div>
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = GomokuGame(root)
-    root.mainloop()
-import tkinter as tk
-from tkinter import messagebox
+        <div class="board-container">
+            <canvas id="gomokuBoard"></canvas>
+        </div>
 
-class GomokuGame:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("五子棋 - 聽牌提示版")
-        
-        self.grid_size = 15
-        self.cell_size = 40
-        self.margin = 30
-        self.turn = 1 
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.hints = [] # 用來儲存提示圓圈的 ID
-        
-        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
-                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
-        self.canvas.pack()
-        self.draw_grid()
-        self.canvas.bind("<Button-1>", self.handle_click)
+        <div class="grid grid-cols-2 gap-4">
+            <button id="undoBtn" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-3 px-4 border border-gray-400 rounded shadow transition">
+                悔棋
+            </button>
+            <button id="resetBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded shadow transition">
+                重開一局
+            </button>
+        </div>
+    </div>
 
-    def draw_grid(self):
-        for i in range(self.grid_size):
-            self.canvas.create_line(self.margin, self.margin + i * self.cell_size,
-                                    self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size)
-            self.canvas.create_line(self.margin + i * self.cell_size, self.margin,
-                                    self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size)
+    <div id="winnerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-xs w-full mx-4">
+            <h2 id="winnerText" class="text-2xl font-bold mb-4">黑子獲勝！</h2>
+            <button id="modalResetBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                再玩一局
+            </button>
+        </div>
+    </div>
 
-    def handle_click(self, event):
-        x = round((event.x - self.margin) / self.cell_size)
-        y = round((event.y - self.margin) / self.cell_size)
+    <script>
+        // --- 音效系統 (Web Audio API) ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let soundEnabled = true;
 
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
-            self.clear_hints() # 下子前清空舊提示
-            self.place_piece(x, y)
-            self.show_winning_hints() # 下子後顯示新提示
-
-    def place_piece(self, x, y):
-        self.board[y][x] = self.turn
-        color = "black" if self.turn == 1 else "white"
-        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
-        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color)
-
-        if self.check_win(x, y, self.turn):
-            messagebox.showinfo("遊戲結束", f"恭喜 {'黑方' if self.turn == 1 else '白方'} 獲勝！")
-            self.reset_game()
-        else:
-            self.turn = 3 - self.turn
-
-    def check_win(self, x, y, player):
-        """檢查特定位置落子後，該玩家是否達成五連"""
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        for dx, dy in directions:
-            count = 1
-            for direction in [1, -1]:
-                nx, ny = x + dx * direction, y + dy * direction
-                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
-                    count += 1
-                    nx += dx * direction
-                    ny += dy * direction
-            if count >= 5: return True
-        return False
-
-    def show_winning_hints(self):
-        """掃描全盤，找出下一手就能贏的位置（聽牌點）"""
-        for y in range(self.grid_size):
-            for x in range(self.grid_size):
-                if self.board[y][x] == 0:
-                    # 如果當前玩家下一步能贏，標註為「進攻聽牌」
-                    if self.check_win(x, y, self.turn):
-                        self.draw_hint(x, y, "red") 
-                    # 如果對手下一步能贏，標註為「防禦點」（選用）
-                    elif self.check_win(x, y, 3 - self.turn):
-                        self.draw_hint(x, y, "blue")
-
-    def draw_hint(self, x, y, color):
-        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
-        # 畫一個小空心圓作為提示
-        hid = self.canvas.create_oval(px-5, py-5, px+5, py+5, outline=color, width=2)
-        self.hints.append(hid)
-
-    def clear_hints(self):
-        for hid in self.hints:
-            self.canvas.delete(hid)
-        self.hints = []
-
-    def reset_game(self):
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.canvas.delete("all")
-        self.draw_grid()
-        self.turn = 1
-        self.hints = []
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = GomokuGame(root)
-    root.mainloop()
-import tkinter as tk
-from tkinter import messagebox
-import random
-
-class GomokuAI:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("五子棋：人機大戰版")
-        
-        self.grid_size = 15
-        self.cell_size = 40
-        self.margin = 30
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.turn = 1  # 1: 玩家(黑), 2: 電腦(白)
-        self.game_over = False
-        
-        # 棋型評分
-        self.scores = {
-            "FIVE": 100000,
-            "LIVE_FOUR": 10000,
-            "DORMANT_FOUR": 1000,
-            "LIVE_THREE": 1000,
-            "DORMANT_THREE": 100,
-            "LIVE_TWO": 100,
-            "DORMANT_TWO": 10
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
         }
 
-        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
-                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
-        self.canvas.pack()
-        self.draw_grid()
-        self.canvas.bind("<Button-1>", self.handle_click)
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    def draw_grid(self):
-        for i in range(self.grid_size):
-            self.canvas.create_line(self.margin, self.margin + i * self.cell_size,
-                                    self.margin + (self.grid_size - 1) * self.cell_size, self.margin + i * self.cell_size)
-            self.canvas.create_line(self.margin + i * self.cell_size, self.margin,
-                                    self.margin + i * self.cell_size, self.margin + (self.grid_size - 1) * self.cell_size)
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
 
-    def handle_click(self, event):
-        if self.game_over or self.turn != 1: return
+            const now = audioCtx.currentTime;
+
+            if (type === 'place') {
+                // 落子聲 (清脆的木頭撞擊聲)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'undo') {
+                // 悔棋聲
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'win') {
+                // 獲勝聲 (三連音)
+                [0, 0.15, 0.3].forEach((delay, i) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(440 * Math.pow(1.06, [0, 4, 7][i]), now + delay);
+                    g.gain.setValueAtTime(0.1, now + delay);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.3);
+                    o.start(now + delay);
+                    o.stop(now + delay + 0.3);
+                });
+            }
+        }
+
+        // --- 遊戲邏輯 ---
+        const canvas = document.getElementById('gomokuBoard');
+        const ctx = canvas.getContext('2d');
+        const turnDisplay = document.getElementById('turnDisplay');
+        const statusCard = document.getElementById('statusCard');
+        const aiThinkingUI = document.getElementById('aiThinking');
+        const winnerModal = document.getElementById('winnerModal');
+        const p2pBtn = document.getElementById('p2pMode');
+        const p2cBtn = document.getElementById('p2cMode');
+        const soundToggle = document.getElementById('soundToggle');
+        const soundOnIcon = document.getElementById('soundOnIcon');
+        const soundOffIcon = document.getElementById('soundOffIcon');
         
-        x = round((event.x - self.margin) / self.cell_size)
-        y = round((event.y - self.margin) / self.cell_size)
+        const GRID_SIZE = 15;
+        let PADDING = 25;
+        let CELL_SIZE = 0;
+        let board = []; 
+        let currentPlayer = 1; 
+        let isAiMode = false;
+        let isAiThinking = false;
+        let history = [];
+        let gameOver = false;
 
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
-            self.place_piece(x, y)
-            if not self.game_over:
-                self.master.after(500, self.ai_move) # 延遲半秒讓電腦思考
+        function initGame() {
+            const containerWidth = Math.min(window.innerWidth - 40, 450);
+            canvas.width = containerWidth;
+            canvas.height = containerWidth;
+            CELL_SIZE = (canvas.width - PADDING * 2) / (GRID_SIZE - 1);
+            resetBoard();
+        }
 
-    def place_piece(self, x, y):
-        self.board[y][x] = self.turn
-        color = "black" if self.turn == 1 else "white"
-        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
-        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color, tags="piece")
+        function resetBoard() {
+            board = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+            currentPlayer = 1;
+            history = [];
+            gameOver = false;
+            isAiThinking = false;
+            aiThinkingUI.classList.add('hidden');
+            updateStatusUI();
+            winnerModal.classList.add('hidden');
+            draw();
+        }
 
-        if self.check_win(x, y, self.turn):
-            winner = "玩家" if self.turn == 1 else "電腦"
-            messagebox.showinfo("遊戲結束", f"{winner}獲勝了！")
-            self.game_over = True
-            self.reset_game()
-        else:
-            self.turn = 3 - self.turn
+        function updateStatusUI() {
+            const isBlack = currentPlayer === 1;
+            turnDisplay.innerText = isBlack ? "黑子 (玩家)" : (isAiMode ? "白子 (AI)" : "白子 (玩家)");
+            statusCard.style.borderLeftColor = isBlack ? "#000" : (isAiMode ? "#3b82f6" : "#fff");
+        }
 
-    def check_win(self, x, y, player):
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        for dx, dy in directions:
-            count = 1
-            for d in [1, -1]:
-                nx, ny = x + dx*d, y + dy*d
-                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
-                    count += 1
-                    nx, ny = nx + dx*d, ny + dy*d
-            if count >= 5: return True
-        return False
+        function draw() {
+            ctx.fillStyle = '#e3c18d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.strokeStyle = '#5d4037';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < GRID_SIZE; i++) {
+                ctx.moveTo(PADDING + i * CELL_SIZE, PADDING);
+                ctx.lineTo(PADDING + i * CELL_SIZE, canvas.height - PADDING);
+                ctx.moveTo(PADDING, PADDING + i * CELL_SIZE);
+                ctx.lineTo(canvas.width - PADDING, PADDING + i * CELL_SIZE);
+            }
+            ctx.stroke();
 
-    # --- AI 邏輯部分 ---
-    
-    def ai_move(self):
-        best_score = -1
-        best_moves = []
+            [3, 7, 11].forEach(r => [3, 7, 11].forEach(c => {
+                ctx.beginPath();
+                ctx.arc(PADDING + c * CELL_SIZE, PADDING + r * CELL_SIZE, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#5d4037';
+                ctx.fill();
+            }));
 
-        for y in range(self.grid_size):
-            for x in range(self.grid_size):
-                if self.board[y][x] == 0:
-                    # 計算該位置的總分：自己的進攻分 + 對手的威脅分
-                    my_score = self.evaluate_point(x, y, 2)
-                    enemy_score = self.evaluate_point(x, y, 1)
-                    
-                    # 權衡攻守：如果對手快贏了，防禦權重加高
-                    total_score = my_score + enemy_score 
-                    
-                    if total_score > best_score:
-                        best_score = total_score
-                        best_moves = [(x, y)]
-                    elif total_score == best_score:
-                        best_moves.append((x, y))
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (board[r][c] !== 0) drawPiece(r, c, board[r][c]);
+                }
+            }
 
-        if best_moves:
-            move = random.choice(best_moves)
-            self.place_piece(move[0], move[1])
+            if (history.length > 0) {
+                const last = history[history.length - 1];
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(PADDING + last.c * CELL_SIZE - 5, PADDING + last.r * CELL_SIZE - 5, 10, 10);
+            }
+        }
 
-    def evaluate_point(self, x, y, player):
-        """評估單一落子點的分數"""
-        total_score = 0
-        enemy = 3 - player
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        
-        for dx, dy in directions:
-            line = []
-            # 獲取該方向前後各 4 格的狀況
-            for i in range(-4, 5):
-                nx, ny = x + i*dx, y + i*dy
-                if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
-                    if i == 0:
-                        line.append(player)
-                    else:
-                        line.append(self.board[ny][nx])
-                else:
-                    line.append(-1) # 邊界
+        function drawPiece(r, c, type) {
+            const x = PADDING + c * CELL_SIZE;
+            const y = PADDING + r * CELL_SIZE;
+            const radius = CELL_SIZE * 0.4;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            const grad = ctx.createRadialGradient(x - 3, y - 3, 2, x, y, radius);
+            if (type === 1) {
+                grad.addColorStop(0, '#666'); grad.addColorStop(1, '#000');
+            } else {
+                grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#ccc');
+            }
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 3; ctx.shadowOffsetY = 2; ctx.shadowColor = "rgba(0,0,0,0.3)";
+            ctx.fill();
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        }
+
+        function handleAction(x, y) {
+            initAudio(); // 確保使用者互動後激活 AudioContext
+            if (gameOver || isAiThinking) return;
+            const rect = canvas.getBoundingClientRect();
+            const c = Math.round((x - rect.left - PADDING) / CELL_SIZE);
+            const r = Math.round((y - rect.top - PADDING) / CELL_SIZE);
+
+            if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE && board[r][c] === 0) {
+                makeMove(r, c);
+                if (!gameOver && isAiMode && currentPlayer === 2) {
+                    startAiTurn();
+                }
+            }
+        }
+
+        function makeMove(r, c) {
+            board[r][c] = currentPlayer;
+            history.push({r, c, p: currentPlayer});
+            playSound('place');
+            draw();
             
-            total_score += self.analyze_line(line, player)
-        return total_score
+            if (checkWin(r, c, currentPlayer)) {
+                playSound('win');
+                endGame(currentPlayer === 1 ? "黑子獲勝！" : (isAiMode ? "AI 獲勝！" : "白子獲勝！"));
+                return;
+            }
 
-    def analyze_line(self, line, player):
-        """分析一條線上的棋型並給分"""
-        line_str = "".join([str(x) if x != -1 else "B" for x in line]) # B 代表 Boundary
-        p = str(player)
-        
-        if p*5 in line_str: return self.scores["FIVE"]
-        if "0"+p*4+"0" in line_str: return self.scores["LIVE_FOUR"]
-        if "0"+p*4 in line_str or p*4+"0" in line_str: return self.scores["DORMANT_FOUR"]
-        if "0"+p*3+"0" in line_str: return self.scores["LIVE_THREE"]
-        if "0"+p*2+"0" in line_str: return self.scores["LIVE_TWO"]
-        
-        return 0
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateStatusUI();
+        }
 
-    def reset_game(self):
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.canvas.delete("piece")
-        self.turn = 1
-        self.game_over = False
+        function checkWin(r, c, p) {
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1;
+                for (let s of [1, -1]) {
+                    let nr = r + dr*s, nc = c + dc*s;
+                    while(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr][nc] === p) {
+                        count++; nr += dr*s; nc += dc*s;
+                    }
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = GomokuAI(root)
-    root.mainloop()
+        function endGame(msg) {
+            gameOver = true;
+            document.getElementById('winnerText').innerText = msg;
+            winnerModal.classList.remove('hidden');
+        }
 
-pip install pygame
+        function startAiTurn() {
+            isAiThinking = true;
+            aiThinkingUI.classList.remove('hidden');
+            setTimeout(() => {
+                const bestMove = getBestMove();
+                makeMove(bestMove.r, bestMove.c);
+                isAiThinking = false;
+                aiThinkingUI.classList.add('hidden');
+            }, 600);
+        }
 
-import tkinter as tk
-from tkinter import messagebox
-import random
-import pygame  # 引入音效庫
+        function getBestMove() {
+            let bestScore = -Infinity;
+            let moves = [];
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (board[r][c] === 0) {
+                        let score = evaluatePoint(r, c, 2) + evaluatePoint(r, c, 1) * 1.1;
+                        score += (7 - Math.abs(r - 7)) + (7 - Math.abs(c - 7));
+                        if (score > bestScore) {
+                            bestScore = score;
+                            moves = [{r, c}];
+                        } else if (score === bestScore) {
+                            moves.push({r, c});
+                        }
+                    }
+                }
+            }
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
 
-class GomokuAI:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("五子棋：人機大戰（音效增強版）")
-        
-        # 初始化 Pygame Mixer
-        pygame.mixer.init()
-        self.load_sounds()
+        function evaluatePoint(r, c, p) {
+            let totalScore = 0;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1; let blocked = 0;
+                for (let s of [1, -1]) {
+                    let nr = r + dr*s, nc = c + dc*s;
+                    while(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr][nc] === p) {
+                        count++; nr += dr*s; nc += dc*s;
+                    }
+                    if (!(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr][nc] === 0)) blocked++;
+                }
+                if (count >= 5) totalScore += 100000;
+                else if (count === 4) totalScore += (blocked === 0 ? 10000 : 2500);
+                else if (count === 3) totalScore += (blocked === 0 ? 3000 : 500);
+                else if (count === 2) totalScore += (blocked === 0 ? 400 : 0);
+            }
+            return totalScore;
+        }
 
-        self.grid_size = 15
-        self.cell_size = 40
-        self.margin = 30
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.turn = 1 
-        self.game_over = False
-        
-        # 棋型評分
-        self.scores = {"FIVE": 100000, "LIVE_FOUR": 10000, "DORMANT_FOUR": 1000, "LIVE_THREE": 1000}
+        // --- 事件監聽 ---
+        canvas.addEventListener('mousedown', e => handleAction(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            handleAction(e.touches[0].clientX, e.touches[0].clientY);
+        });
 
-        self.canvas = tk.Canvas(master, width=self.grid_size * self.cell_size + self.margin,
-                                height=self.grid_size * self.cell_size + self.margin, bg="#E3C16F")
-        self.canvas.pack()
-        self.draw_grid()
-        self.canvas.bind("<Button-1>", self.handle_click)
+        soundToggle.onclick = () => {
+            soundEnabled = !soundEnabled;
+            soundOnIcon.classList.toggle('hidden', !soundEnabled);
+            soundOffIcon.classList.toggle('hidden', soundEnabled);
+        };
 
-    def load_sounds(self):
-        """加載音效檔案"""
-        try:
-            self.sound_stone = pygame.mixer.Sound("stone.wav")
-            self.sound_win = pygame.mixer.Sound("win.wav")
-            self.sound_lose = pygame.mixer.Sound("lose.wav")
-        except:
-            print("音效檔案遺失，將以靜音模式執行")
-            self.sound_stone = self.sound_win = self.sound_lose = None
+        p2pBtn.onclick = () => {
+            isAiMode = false;
+            p2pBtn.classList.add('mode-active');
+            p2cBtn.classList.remove('mode-active');
+            resetBoard();
+        };
 
-    def play_sound(self, sound):
-        """播放音效"""
-        if sound:
-            sound.play()
+        p2cBtn.onclick = () => {
+            isAiMode = true;
+            p2cBtn.classList.add('mode-active');
+            p2pBtn.classList.remove('mode-active');
+            resetBoard();
+        };
 
-    def handle_click(self, event):
-        if self.game_over or self.turn != 1: return
-        x = round((event.x - self.margin) / self.cell_size)
-        y = round((event.y - self.margin) / self.cell_size)
+        document.getElementById('undoBtn').onclick = () => {
+            if (history.length < (isAiMode ? 2 : 1) || gameOver) return;
+            playSound('undo');
+            const steps = isAiMode ? 2 : 1;
+            for(let i=0; i<steps; i++) {
+                let last = history.pop();
+                board[last.r][last.c] = 0;
+            }
+            if (!isAiMode) currentPlayer = currentPlayer === 1 ? 2 : 1;
+            else currentPlayer = 1;
+            updateStatusUI();
+            draw();
+        };
 
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size and self.board[y][x] == 0:
-            self.place_piece(x, y)
-            if not self.game_over:
-                self.master.after(500, self.ai_move)
-
-    def place_piece(self, x, y):
-        self.board[y][x] = self.turn
-        color = "black" if self.turn == 1 else "white"
-        px, py = self.margin + x * self.cell_size, self.margin + y * self.cell_size
-        self.canvas.create_oval(px-15, py-15, px+15, py+15, fill=color, tags="piece")
-        
-        # 播放落子聲
-        self.play_sound(self.sound_stone)
-
-        if self.check_win(x, y, self.turn):
-            self.game_over = True
-            if self.turn == 1:
-                self.play_sound(self.sound_win)
-                messagebox.showinfo("遊戲結束", "恭喜你贏了！")
-            else:
-                self.play_sound(self.sound_lose)
-                messagebox.showinfo("遊戲結束", "電腦獲勝，再接再厲！")
-            self.reset_game()
-        else:
-            self.turn = 3 - self.turn
-
-    def check_win(self, x, y, player):
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        for dx, dy in directions:
-            count = 1
-            for d in [1, -1]:
-                nx, ny = x + dx*d, y + dy*d
-                while 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and self.board[ny][nx] == player:
-                    count += 1
-                    nx, ny = nx + dx*d, ny + dy*d
-            if count >= 5: return True
-        return False
-
-    def ai_move(self):
-        # ... (此處省略與上一版相同的 AI 邏輯代碼以節省空間) ...
-        # 確保在 ai_move 最後調用 self.place_piece(move[0], move[1]) 即可自動觸發音效
-        pass
-
-    # (其餘 evaluate_point, analyze_line 等函式保持不變)
-
-    def reset_game(self):
-        self.board = [[0] * self.grid_size for _ in range(self.grid_size)]
-        self.canvas.delete("piece")
-        self.turn = 1
-        self.game_over = False
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    game = GomokuAI(root)
-    root.mainloop()
+        document.getElementById('resetBtn').onclick = resetBoard;
+        document.getElementById('modalResetBtn').onclick = resetBoard;
+        window.onresize = initGame;
+        initGame();
+    </script>
+</body>
+</html>
